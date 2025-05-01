@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Стратегия Бойцы</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        .content {
+            display: none;
+        }
+        .active {
+            display: block;
+        }
+        .fighter {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Стратегия Бойцы</h1>
+
+<nav>
+    <button onclick="showSection('modes')">Режимы</button>
+    <button onclick="showSection('fighters')">Бойцы</button>
+    <button onclick="showSection('shop')">Магазин</button>
+    <button onclick="showSection('account')">Аккаунт</button>
+</nav>
+
+<div id="modes" class="content active">
+    <h2>Выберите режим игры:</h2>
+    <button onclick="startGame()">Начать игру</button>
+</div>
+
+<div id="fighters" class="content">
+    <h2>Ваши бойцы:</h2>
+    
+    <div id="fighterList"></div>
+
+    <h3>Добавить бойца:</h3>
+    <input type="text" id="fighterName" placeholder="Имя бойца">
+    <input type="number" id="fighterHP" placeholder="Здоровье" min="1">
+    <input type="number" id="fighterDamage" placeholder="Урон" min="1">
+    <button onclick="addFighter()">Добавить бойца</button>
+</div>
+
+<div id="shop" class="content">
+    <h2>Магазин</h2>
+    <button onclick="exchangeCoinsForGems()">Обменять 1000 монет на 1 гем</button>
+</div>
+
+<div id="account" class="content">
+    <h2>Аккаунт</h2>
+    <p>Кубки: <span id="trophies">0</span></p>
+    <p>Слава: <span id="glory">Бронза</span></p>
+    <p>Максимум кубков: <span id="maxTrophies">0</span></p>
+    <p>Монеты: <span id="coins">0</span></p>
+    <p>Гемы: <span id="gems">0</span></p>
+    <p>Использованные промокоды: <span id="promoCount">0</span></p>
+    <button onclick="applyPromoCode()">Применить промокод</button>
+</div>
+
+<script>
+    let trophies = 0;
+    let maxTrophies = 0;
+    let coins = 0;
+    let gems = 0;
+    let promoCount = 0;
+
+    // Массив для хранения бойцов
+    const fighters = [
+        { name: 'Шели', level: 1, hp: 300, damage: 50 },
+        { name: 'Кольт', level: 1, hp: 250, damage: 60 }
+    ];
+    
+    let calibrationBattles = 10; // Количество боев для калибровки
+    let completedCalibrationBattles = 0; // Счетчик завершенных боев
+    let calibrationResults = []; // Результаты боев
+
+    function startGame() {
+        coins = 1000; // Начальное количество монет
+        updateStats();
+        showSection('fighters');
+    }
+
+    function showSection(section) {
+        const sections = document.querySelectorAll('.content');
+        sections.forEach(sec => sec.classList.remove('active'));
+        document.getElementById(section).classList.add('active');
+        
+        if (section === 'fighters') {
+            updateFighterList();
+        }
+    }
+
+    function addFighter() {
+        const name = document.getElementById('fighterName').value.trim();
+        const hp = parseInt(document.getElementById('fighterHP').value);
+        const damage = parseInt(document.getElementById('fighterDamage').value);
+
+        // Проверка на уникальность имени
+        if (fighters.some(fighter => fighter.name.toLowerCase() === name.toLowerCase())) {
+            alert('Боец с таким именем уже существует!');
+            return;
+        }
+
+        if (name && hp > 0 && damage > 0) {
+            fighters.push({ name, level: 1, hp, damage });
+            document.getElementById('fighterName').value = '';
+            document.getElementById('fighterHP').value = '';
+            document.getElementById('fighterDamage').value = '';
+            updateFighterList();
+        } else {
+            alert('Пожалуйста, заполните все поля корректно.');
+        }
+    }
+
+    function updateFighterList() {
+        const fighterListDiv = document.getElementById('fighterList');
+        fighterListDiv.innerHTML = ''; // Очищаем список
+
+        fighters.forEach((fighter, index) => {
+            const fighterDiv = document.createElement('div');
+            fighterDiv.className = 'fighter';
+            fighterDiv.innerHTML = 
+                <h3>${fighter.name}</h3>
+                <p>Уровень: ${fighter.level}</p>
+                <p>Здоровье: ${fighter.hp}</p>
+                <p>Урон: ${fighter.damage}</p>
+                <button onclick="levelUp(${index})">Повысить уровень (${getLevelUpCost(fighter.level)} монет / 1 гем)</button>
+            ;
+            fighterListDiv.appendChild(fighterDiv);
+        });
+    }
+
+    function getLevelUpCost(level) {
+        return Math.pow(2, level - 1) * 100; // Стоимость повышения уровня
+    }
+
+    function levelUp(index) {
+        const costInCoins = getLevelUpCost(fighters[index].level);
+
+        if (coins >= costInCoins) {
+            coins -= costInCoins; // Списываем монеты
+            fighters[index].level++;
+            fighters[index].hp += 30; // Увеличиваем здоровье
+            fighters[index].damage += 10; // Увеличиваем урон
+
+            alert(${fighters[index].name} повысил уровень!);
+            updateStats();
+            updateFighterList(); // Обновляем список бойцов
+        } else {
+            alert('Недостаточно монет для повышения уровня!');
+        }
+    }
+
+    function updateStats() {
+        document.getElementById('trophies').innerText = trophies;
+        
+        maxTrophies = Math.max(maxTrophies, trophies);
+        document.getElementById('maxTrophies').innerText = maxTrophies;
+
+        document.getElementById('coins').innerText = coins;
+        document.getElementById('gems').innerText = gems;
+        document.getElementById('promoCount').innerText = promoCount;
+
+        updateGlory(); // Обновляем уровень славы
+    }
+
+    function exchangeCoinsForGems() {
+        if (coins >= 1000) {
+            coins -= 1000; // Списываем монеты
+            gems += 1; // Добавляем гем
+            updateStats();
+            alert('Вы обменяли 1000 монет на 1 гем!');
+        } else {
+            alert('Недостаточно монет для обмена!');
+        }
+    }
+
+    function applyPromoCode() {
+        if (promoCount === 0) { // Можно использовать только один раз
+            trophies += 50000; // Добавляем кубки
+            promoCount++;
+            alert('Промокод успешно применен!');
+            updateStats();
+        } else {
+            alert('Промокод уже использован!');
+        }
+    }
+
+    function updateGlory() {
+        let gloryLevel;
+
+        if (trophies >= 1000) {
+            gloryLevel = 'Легенда';
+        } else if (trophies >= 750) {
+            gloryLevel = 'Алмаз';
+        } else if (trophies >= 500) {
+            gloryLevel = 'Золото';
+        } else if (trophies >= 250) {
+            gloryLevel = 'Серебро';
+        } else {
+            gloryLevel = 'Бронза';
+        }
+
+        document.getElementById('glory').innerText = gloryLevel;
+
+        if (trophies >= 1000) {
+            alert('Достигнут максимальный ранг!');
+        }
+    }
+</script>
+
+</body>
+</html>
